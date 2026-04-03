@@ -1,0 +1,10 @@
+# Abaikan kredensial Azure & DB
+.env
+
+# Abaikan environment Python & cache
+venv/
+__pycache__/
+
+# Abaikan file log
+*.log
+api_log.txt
