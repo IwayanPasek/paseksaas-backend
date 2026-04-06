@@ -1,0 +1,25 @@
+# PasekSaaS Backend — Python Dependencies
+# ─────────────────────────────────────────
+
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+
+# Configuration
+pydantic-settings>=2.0
+python-dotenv>=1.0.0
+
+# AI Provider
+openai>=1.50.0
+
+# Database (Async MySQL)
+aiomysql>=0.2.0
+
+# Session Store
+redis[hiredis]>=5.0.0
+
+# Rate Limiting
+slowapi>=0.1.9
+
+# Retry Logic
+tenacity>=9.0.0
