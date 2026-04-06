@@ -9,7 +9,7 @@ Fails fast on missing critical variables instead of using hardcoded defaults.
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 
 class Settings(BaseSettings):
@@ -18,7 +18,11 @@ class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────
     DB_HOST: str = Field(..., description="MySQL host")
     DB_USER: str = Field(..., description="MySQL user")
-    DB_PASSWORD: str = Field(..., description="MySQL password")
+    DB_PASSWORD: str = Field(
+        ...,
+        validation_alias=AliasChoices("DB_PASSWORD", "DB_PASS"),
+        description="MySQL password (accepts DB_PASSWORD or DB_PASS from .env)",
+    )
     DB_NAME: str = Field(..., description="MySQL database name")
     DB_CHARSET: str = "utf8mb4"
     DB_POOL_MIN: int = Field(default=2, ge=1, le=20)
