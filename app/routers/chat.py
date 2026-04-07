@@ -33,67 +33,66 @@ limiter = Limiter(key_func=get_remote_address)
 async def _handle_chat(payload: ChatRequest, background_tasks: BackgroundTasks) -> ChatResponse:
     """
     Core chat handler logic shared between /api/chat and /api/v1/chat.
-    Separated to avoid code duplication while maintaining backward compatibility.
     """
     settings = get_settings()
 
     logger.info(
-        "[CHAT] id_toko=%d | session=%s...",
-        payload.id_toko,
+        "[CHAT] store_id=%d | session=%s...",
+        payload.store_id,
         payload.session_id[:10],
     )
 
     # 1. Fetch store data (cached)
-    toko = await get_toko_data(payload.id_toko)
-    if not toko:
-        raise HTTPException(status_code=404, detail="Toko tidak ditemukan.")
+    store = await get_toko_data(payload.store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found.")
 
     # 2. Fetch product list (cached)
-    produk_list = await get_produk_list(payload.id_toko)
+    product_list = await get_produk_list(payload.store_id)
 
     # 3. Build system prompt
-    system_prompt = build_system_prompt(toko, produk_list)
+    system_prompt = build_system_prompt(store, product_list)
 
     # 4. Load session history from Redis
-    history = await session_manager.get_history(payload.id_toko, payload.session_id)
+    history = await session_manager.get_history(payload.store_id, payload.session_id)
 
     # 5. Construct messages for AI
     messages = [{"role": "system", "content": system_prompt}]
     messages += history
     messages.append({"role": "user", "content": payload.user_message})
 
-    # 6. Call Azure OpenAI (with retry + timeout)
+    # 6. Call Azure OpenAI
     try:
         reply = await ai_service.chat(messages)
     except Exception as e:
         logger.error(
-            "Azure OpenAI Error (id_toko=%d): %s: %s",
-            payload.id_toko,
+            "AI Service Error (store_id=%d): %s: %s",
+            payload.store_id,
             type(e).__name__,
             e,
         )
         raise HTTPException(
             status_code=503,
-            detail="Layanan AI sedang tidak tersedia. Silakan coba lagi.",
+            detail="AI service is currently unavailable. Please try again later.",
         )
 
     # 7. Detect mentioned products for card UI
-    db_result = find_mentioned_products(reply, produk_list)
+    products = find_mentioned_products(reply, product_list)
 
     # 8. Update session history in Redis
     history.append({"role": "user", "content": payload.user_message})
     history.append({"role": "assistant", "content": reply})
     await session_manager.save_history(
-        payload.id_toko,
+        payload.store_id,
         payload.session_id,
         history,
         max_messages=settings.MAX_HISTORY * 2,
     )
 
-    # 9. Log chat to database (fire-and-forget background task)
+    # 9. Log chat to database
     background_tasks.add_task(
         log_chat_to_db,
-        payload.id_toko,
+        payload.store_id,
         payload.session_id,
         payload.user_message,
         reply,
@@ -102,9 +101,9 @@ async def _handle_chat(payload: ChatRequest, background_tasks: BackgroundTasks) 
     # 10. Return response matching frontend contract
     return ChatResponse(
         reply=reply,
-        db_result=db_result,
-        toko=toko.get("nama_toko", ""),
-        gaya=toko.get("ai_gaya_bahasa") or "formal",
+        products=products,
+        store_name=store.get("store_name", ""),
+        tone=store.get("ai_tone") or "formal",
         session_id=payload.session_id,
     )
 
