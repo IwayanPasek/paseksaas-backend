@@ -1,13 +1,13 @@
 # app/schemas.py
 # PasekSaaS — Pydantic Request/Response Schemas
 # ──────────────────────────────────────────────────────
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, AliasChoices
 from typing import List, Optional, Any
 import re
 
 class ChatRequest(BaseModel):
     """Incoming chat message from the storefront widget."""
-    store_id: int = Field(..., ge=1, description="Store ID (positive integer)")
+    store_id: int = Field(..., validation_alias=AliasChoices("store_id", "id_toko"), ge=1, description="Store ID (positive integer)")
     session_id: str = Field(..., min_length=5, max_length=100, description="Client session identifier")
     user_message: str = Field(..., min_length=1, max_length=500, description="User message text")
 
@@ -28,12 +28,13 @@ class ChatRequest(BaseModel):
         return v
 
 class ProductItem(BaseModel):
-    """Product summary for chat responses."""
-    id_produk: int
-    nama_produk: str
-    harga: int
-    deskripsi: Optional[str] = None
-    foto_produk: Optional[str] = None
+    """Product summary for chat responses (Matches frontend contract)."""
+    id: int = Field(..., validation_alias=AliasChoices("id", "id_produk"))
+    name: str = Field(..., validation_alias=AliasChoices("name", "nama_produk"))
+    price: int = Field(..., validation_alias=AliasChoices("price", "harga"))
+    description: Optional[str] = Field(None, validation_alias=AliasChoices("description", "deskripsi"))
+    image: Optional[str] = Field(None, validation_alias=AliasChoices("image", "foto_produk"))
+    categoryId: Optional[int] = Field(None, validation_alias=AliasChoices("categoryId", "id_kategori"))
 
 class ChatResponse(BaseModel):
     """Response to the chat widget."""

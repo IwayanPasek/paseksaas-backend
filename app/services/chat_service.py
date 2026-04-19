@@ -112,6 +112,7 @@ def find_mentioned_products(reply_text: str, product_list: list[dict]) -> list[d
                     "harga": p["harga"],
                     "deskripsi": p["deskripsi"],
                     "foto_produk": p["foto_produk"],
+                    "id_kategori": p.get("id_kategori"),
                 }
             )
             # Limit to 3 product cards to keep UI clean
